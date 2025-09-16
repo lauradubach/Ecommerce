@@ -1,22 +1,34 @@
 from cs50 import SQL
 from flask_session import Session
-from flask import Flask, render_template, redirect, request, session, jsonify
+from flask import Flask, render_template, redirect, request, session 
 from datetime import datetime
 
-# Instantiate Flask object named app
+# # Instantiate Flask object named app
 app = Flask(__name__)
 
-# Configure sessions
+# # Configure sessions
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Creates a connection to the database
-db = SQL( "mysql://shopuser2:password2@10.11.5.5:3306/ecommerce" )
+def get_db():
+    if not hasattr(get_db, 'db'):
+        get_db.db = SQL("mysql://shopuser:password@10.11.5.5:3306/ecommerce")
+    return get_db.db
+
+def init_db():
+    global db
+    db = get_db()
+
+# Initialize db when running the app
+if __name__ == '__main__':
+    init_db()
 
 
 @app.route("/")
 def index():
+    db = get_db()
     shirts = db.execute("SELECT * FROM shirts ORDER BY onSalePrice")
     shirtsLen = len(shirts)
     # Initialize variables
@@ -236,6 +248,7 @@ def logout():
 
 @app.route("/register/", methods=["POST"] )
 def registration():
+    db = get_db()
     # Get info from form
     username = request.form["username"]
     password = request.form["password"]
@@ -255,45 +268,6 @@ def registration():
     return render_template ( "login.html" )
 
 
-
-def get_similar_products():
-    """
-    Liefert eine Liste ähnlicher Produkte basierend auf den Kategorien der Produkte im Warenkorb.
-    Es werden max. 6 Produkte zurückgegeben, die nicht im Warenkorb sind.
-    """
-    # Hole alle Produkte im Warenkorb mit deren IDs und Kategorien
-    cart_items = db.execute("SELECT id FROM cart GROUP BY id")
-    if not cart_items:
-        return []
-
-    # IDs der Produkte im Warenkorb
-    cart_ids = [item['id'] for item in cart_items]
-
-    # Hole Kategorien der Produkte im Warenkorb
-    query = "SELECT DISTINCT typeClothes FROM shirts WHERE id IN ({seq})".format(
-        seq=','.join(['?'] * len(cart_ids))
-    )
-    categories = db.execute(query, *cart_ids)
-    if not categories:
-        return []
-
-    category_list = [cat['typeClothes'] for cat in categories]
-
-    # Hole ähnliche Produkte aus den gleichen Kategorien, die nicht im Warenkorb sind
-    query = """
-        SELECT * FROM shirts 
-        WHERE typeClothes IN ({seq_cat}) AND id NOT IN ({seq_id})
-        ORDER BY onSalePrice ASC
-        LIMIT 6
-    """.format(
-        seq_cat=','.join(['?'] * len(category_list)),
-        seq_id=','.join(['?'] * len(cart_ids))
-    )
-    params = category_list + cart_ids
-    similar_products = db.execute(query, *params)
-
-    return similar_products
-
 @app.route("/cart/")
 def cart():
     if 'user' in session:
@@ -306,16 +280,5 @@ def cart():
         for i in range(shopLen):
             total += shoppingCart[i]["SUM(subTotal)"]
             totItems += shoppingCart[i]["SUM(qty)"]
-
-        # Hole ähnliche Produkte
-        similar_products = get_similar_products()
-
-        # Render shopping cart mit ähnlichen Produkten
-        return render_template("cart.html", shoppingCart=shoppingCart, shopLen=shopLen, total=total, totItems=totItems, display=display, session=session, similar_products=similar_products)
-
-    # Falls kein User angemeldet ist, Warenkorb leer anzeigen
-    shoppingCart = []
-    shopLen = 0
-    totItems, total, display = 0, 0, 0
-    similar_products = []
-    return render_template("cart.html", shoppingCart=shoppingCart, shopLen=shopLen, total=total, totItems=totItems, display=display, session=session, similar_products=similar_products)
+    # Render shopping cart
+    return render_template("cart.html", shoppingCart=shoppingCart, shopLen=shopLen, total=total, totItems=totItems, display=display, session=session)

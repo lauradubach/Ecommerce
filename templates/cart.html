@@ -83,33 +83,6 @@ Sample Clothing Store - Home
                   </table>
                 </div>
               </div>
-              <!-- Bereich für ähnliche Produkte -->
-              <div class="row mt-4">
-                <div class="col-sm-12">
-                  <h3>Ähnliche Produkte</h3>
-                  {% if similar_products and similar_products|length > 0 %}
-                  <div class="d-flex flex-wrap justify-content-start">
-                    {% for product in similar_products %}
-                    <div class="card m-2" style="width: 12rem;">
-                      <img src="/static/img/{{ product.image }}" class="card-img-top" alt="{{ product.samplename }}">
-                      <div class="card-body">
-                        <h5 class="card-title">{{ product.samplename }}</h5>
-                        <p class="card-text">{{ '${:,.2f}'.format(product.onSalePrice if product.onSale == 1 else product.price) }} CHF</p>
-                        <form action="/buy/">
-                          <input type="hidden" name="id" value="{{ product.id }}">
-                          <input type="hidden" name="quantity" value="1">
-                          <button type="submit" class="btn btn-primary btn-sm">In den Warenkorb</button>
-                        </form>
-                      </div>
-                    </div>
-                    {% endfor %}
-                  </div>
-                  {% else %}
-                  <p>Keine ähnlichen Produkte gefunden.</p>
-                  {% endif %}
-                </div>
-              </div>
-              <!-- Ende Bereich ähnliche Produkte -->
             </div>
           </div>
         </div>
